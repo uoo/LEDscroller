@@ -1,0 +1,121 @@
+%!PS
+%%Title: IFH6-32x32-16S-V1.0 RGB LED matrix
+%%Creator: John Rehwinkel (jrehwin@mac.com)
+%%CreationDate: 8 Dec 2016
+%%Pages: 1
+%%EndComments
+%%BeginProlog
+%%EndProlog
+%%BeginSetup
+
+/asin { 2 copy dup mul exch dup mul sub sqrt exch pop atan } def
+
+/halve { 2 div } def
+/inch { 72 mul } def
+/mm   { 25.4 div inch } def
+/m    { moveto } def
+/l    { lineto } def
+
+/linewidth 0.1 inch def
+
+/width 190.5 mm def
+/height width def
+
+/cholex 12.5 mm def
+/choley  9.5 mm def
+/mholey height halve def
+/mholex 9.5 mm def
+/holedia 3 mm def
+/postdia 2 mm def
+/postx 7.8 mm def
+/posty 17.5 mm def
+/lhubx 25 mm def
+/rhubx 28 mm def
+/huby 133 mm def
+/hubw 13 mm def
+/hubh 33 mm def
+/powx 65 mm def
+/powy 40 mm def
+/poww 20 mm def
+/powh 13 mm def
+/chlen 5 mm def
+
+/drawring {
+	halve /r exch def
+	/y exch def
+	/x exch def
+	x y r 0 360 arc
+	stroke
+	x chlen sub y m
+	x chlen add y l
+	x y chlen sub m
+	x y chlen add l
+	stroke
+} def
+
+/hole {
+	holedia drawring
+} def
+
+/post {
+	postdia drawring
+} def
+
+/box {	% x y w h
+	halve /hh exch def
+	halve /hw exch def
+	/y exch def
+	/x exch def
+
+	x hw sub y hh sub m
+	x hw add y hh sub l
+	x hw add y hh add l
+	x hw sub y hh add l
+	closepath
+	stroke
+} def
+
+%%EndSetup
+
+%%Page: 1 1
+
+0.1 mm setlinewidth
+
+20 mm dup translate
+
+% draw outline
+    0      0 m
+width      0 l
+width height l
+0     height l
+closepath
+stroke
+
+% draw corner holes
+cholex choley hole
+cholex height choley sub hole
+width cholex sub choley hole
+width cholex sub height choley sub hole
+
+% draw midline holes
+mholex mholey hole
+width mholex sub mholey hole
+mholey mholex hole
+mholey height mholex sub hole
+
+% draw posts
+postx height posty sub post
+width postx sub posty post
+
+% draw hub openings
+lhubx huby hubw hubh box
+width rhubx sub huby hubw hubh box
+
+% draw power opening
+width powx sub powy poww powh box
+
+showpage
+
+%%EndPage
+%%Trailer
+%%EOF
