@@ -13,11 +13,17 @@
 #include <math.h>
 #include <stdlib.h>
 #include <SPI.h>
+#include <ADC.h>
 #include <SmartMatrix3.h>
 #include "lcgb3.h"
 
-#define   FRAMEDELAY  5
+//#define   FRAMEDELAY  8
 #define   NRGB        3
+
+#define ASPEED  A3 // 17/SDA
+#define ABRIGHT A2 // 16/SCL
+
+static ADC *  adc = new ADC();
 
 #define COLOR_DEPTH 24                  // known working: 24, 48 - If the sketch uses type `rgb24` directly, COLOR_DEPTH must be 24
 
@@ -41,12 +47,13 @@ static const int defaultScrollOffset = 6;
 static const rgb24 defaultBackgroundColor = {0x40, 0, 0};
 
 // Teensy 3.0 has the LED on pin 13
-static const int ledPin = 13;
+static const int ledPin = LED_BUILTIN;
 
 // Chip select for SD card on the SmartMatrix Shield
 #define SD_CS 15
 
 static int           pos;
+static int           olddelay;
 static boolean       ledstate;
 static unsigned long next;
 
@@ -65,28 +72,40 @@ scrollText(
 void
 setup()
 {
-    pinMode(ledPin, OUTPUT);
+  pinMode(ledPin, OUTPUT);  // does LED conflict with an analog pin?
+  pinMode(ASPEED, INPUT);
+  pinMode(ABRIGHT, INPUT);
 
-    Serial.begin(115200);
+  Serial.begin(115200);
 
-    matrix.addLayer(&backgroundLayer);
-    matrix.addLayer(&scrollingLayer); 
-    matrix.begin();
-    matrix.setBrightness(defaultBrightness);
+  matrix.addLayer(&backgroundLayer);
+  matrix.addLayer(&scrollingLayer); 
+  matrix.begin();
+  matrix.setBrightness(defaultBrightness);
 
-    backgroundLayer.enableColorCorrection(true);
+  backgroundLayer.enableColorCorrection(true);
 
-    backgroundLayer.fillScreen(defaultBackgroundColor);
-    backgroundLayer.swapBuffers();
+  backgroundLayer.fillScreen(defaultBackgroundColor);
+  backgroundLayer.swapBuffers();
 
-    scrollingLayer.setOffsetFromTop(defaultScrollOffset);
+  scrollingLayer.setOffsetFromTop(defaultScrollOffset);
 
-    pos      = 0;
-    next     = 0;
-    ledstate = false;
+  pos      = 0;
+  next     = 0;
+  ledstate = false;
 
-    //scrollText("finished initialization");
-    //delay(3000);
+  adc->setReference(ADC_REF_3V3);
+  adc->setAveraging(1);
+  adc->setResolution(12);
+  adc->setConversionSpeed(ADC_HIGH_SPEED);
+  adc->setSamplingSpeed(ADC_HIGH_SPEED);
+
+  adc->startContinuous(ASPEED, ADC_0);
+  adc->startContinuous(ABRIGHT, ADC_1);
+
+  //scrollText("finished initialization");
+  //delay(3000);
+  olddelay = 0;
 }
 
 void
@@ -94,6 +113,9 @@ loop()
 {
     int                   x;
     int                   y;
+    int                   brightVal;
+    int                   speedVal;
+    int                   delayAmt;
     unsigned long         now;
     const unsigned char * iptr;
     int off;
@@ -102,6 +124,9 @@ loop()
     now = millis();
 
     if (now > next) {
+        speedVal  = adc->analogReadContinuous(ADC_0);
+        brightVal = adc->analogReadContinuous(ADC_1);
+
         digitalWrite(ledPin, ledstate ? HIGH : LOW);
         ledstate = !ledstate;
 
@@ -118,6 +143,8 @@ loop()
             }
         }
 
+        matrix.setBrightness(brightVal / 4);
+
         backgroundLayer.swapBuffers();
         ++pos;
 
@@ -126,6 +153,13 @@ loop()
           pos = 0;
         }
 
-        next = now + FRAMEDELAY;
+        delayAmt = speedVal / 0x100;
+
+        if (delayAmt != olddelay) {
+          Serial.println(delayAmt);
+          olddelay = delayAmt;
+        }
+
+        next = now + delayAmt;
     }
 }
